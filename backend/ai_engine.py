@@ -9,5 +9,11 @@ def analyze_code_with_ai(code: str) -> str:
 
     if not issues:
         return "No obvious vulnerabilities found."
+    
+    report_lines = []
+    for i, issue in enumerate(issues, 1):
+        report_lines.append(
+            f"{i}. [Line {issue['line']}] ({issue['severity']}) {issue['issue']}"
+        )
 
-    return "\n".join(f"{i + 1}. {issue}" for i, issue in enumerate(issues))
+    return "\n".join(report_lines)
