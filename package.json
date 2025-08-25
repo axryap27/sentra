@@ -1,0 +1,112 @@
+{
+  "name": "secure-code-analyzer",
+  "displayName": "Secure Code Analyzer",
+  "description": "AI-powered security vulnerability scanner for your codebase",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "security",
+    "vulnerability",
+    "code analysis",
+    "python"
+  ],
+  "activationEvents": [
+    "onLanguage:python"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "secureCodeAnalyzer.scanFile",
+        "title": "Scan File for Vulnerabilities",
+        "category": "Security"
+      },
+      {
+        "command": "secureCodeAnalyzer.scanWorkspace",
+        "title": "Scan Workspace for Vulnerabilities",
+        "category": "Security"
+      },
+      {
+        "command": "secureCodeAnalyzer.clearDiagnostics",
+        "title": "Clear Security Diagnostics",
+        "category": "Security"
+      },
+      {
+        "command": "secureCodeAnalyzer.showReport",
+        "title": "Show Security Report",
+        "category": "Security"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceLangId == python",
+          "command": "secureCodeAnalyzer.scanFile",
+          "group": "security@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "when": "resourceExtname == .py",
+          "command": "secureCodeAnalyzer.scanFile",
+          "group": "security@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Secure Code Analyzer",
+      "properties": {
+        "secureCodeAnalyzer.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable the security analyzer"
+        },
+        "secureCodeAnalyzer.autoScan": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically scan files on save"
+        },
+        "secureCodeAnalyzer.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Path to Python interpreter"
+        },
+        "secureCodeAnalyzer.severityLevel": {
+          "type": "string",
+          "enum": ["High", "Medium", "Low"],
+          "default": "Medium",
+          "description": "Minimum severity level to report"
+        },
+        "secureCodeAnalyzer.excludePatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["**/test/**", "**/tests/**", "**/__pycache__/**"],
+          "description": "File patterns to exclude from scanning"
+        },
+        "secureCodeAnalyzer.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show security status in the status bar"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
+    "typescript": "^4.9.4"
+  }
+}
