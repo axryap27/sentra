@@ -1,7 +1,17 @@
 from fastapi import FastAPI, UploadFile, File
 from backend.ai_engine import analyze_code_with_ai
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For dev only – restrict in prod
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 #landing endpoint per se
 @app.get("/")
