@@ -1,8 +1,19 @@
 {
-  "name": "secure-code-analyzer",
-  "displayName": "Secure Code Analyzer",
-  "description": "AI-powered security vulnerability scanner for your codebase",
-  "version": "0.0.1",
+  "name": "sentra",
+  "displayName": "Sentra",
+  "description": "Real-time Python security vulnerability scanner with AST-based analysis for VS Code",
+  "version": "0.1.0",
+  "publisher": "Aarya Patel",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/axryap27/sentra"
+  },
+  "bugs": {
+    "url": "https://github.com/axryap27/sentra/issues"
+  },
+  "homepage": "https://github.com/axryap27/sentra#readme",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -60,7 +71,7 @@
       ]
     },
     "configuration": {
-      "title": "Secure Code Analyzer",
+      "title": "Sentra",
       "properties": {
         "secureCodeAnalyzer.enabled": {
           "type": "boolean",

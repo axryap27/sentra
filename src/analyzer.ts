@@ -171,7 +171,7 @@ export class SecurityAnalyzer {
             const severity = this.getSeverityLevel(issue.severity);
             const diagnostic = new vscode.Diagnostic(range, issue.issue, severity);
             
-            diagnostic.source = 'Secure Code Analyzer';
+            diagnostic.source = 'Sentra';
             diagnostic.code = issue.severity.toLowerCase();
             
             return diagnostic;
