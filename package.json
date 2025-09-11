@@ -1,8 +1,8 @@
 {
   "name": "sentra",
-  "displayName": "Sentra",
-  "description": "Real-time Python security vulnerability scanner with AST-based analysis for VS Code",
-  "version": "0.1.0",
+  "displayName": "sentra",
+  "description": "Real-time editor integrated vulnerability scanner using AST-based analysis for VS Code",
+  "version": "0.1.1",
   "publisher": "aaryapatel",
   "license": "MIT",
   "repository": {
@@ -13,7 +13,7 @@
     "url": "https://github.com/axryap27/sentra/issues"
   },
   "homepage": "https://github.com/axryap27/sentra#readme",
-  "icon": "icon.png",
+  "icon": "Icon.png",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -25,7 +25,7 @@
     "security",
     "vulnerability",
     "code analysis",
-    "python"
+    "cybersecurity"
   ],
   "activationEvents": [
     "onLanguage:python"
