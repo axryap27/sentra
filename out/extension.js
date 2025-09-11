@@ -9,7 +9,7 @@ let analyzer;
 let statusBar;
 let reportPanel;
 function activate(context) {
-    console.log('Secure Code Analyzer extension is now active');
+    console.log('Sentra extension is now active');
     // Initialize components
     analyzer = new analyzer_1.SecurityAnalyzer(context);
     statusBar = new statusBar_1.SecurityStatusBar();
@@ -61,7 +61,7 @@ function activate(context) {
     // Add to context subscriptions
     context.subscriptions.push(scanFileCommand, scanWorkspaceCommand, showReportCommand, clearDiagnosticsCommand, onSaveDisposable, onOpenDisposable, statusBar);
     // Show activation message
-    vscode.window.showInformationMessage('Secure Code Analyzer is ready!');
+    vscode.window.showInformationMessage('Sentra is ready!');
 }
 exports.activate = activate;
 function deactivate() {

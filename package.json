@@ -3,7 +3,7 @@
   "displayName": "Sentra",
   "description": "Real-time Python security vulnerability scanner with AST-based analysis for VS Code",
   "version": "0.1.0",
-  "publisher": "Aarya Patel",
+  "publisher": "aaryapatel",
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -81,15 +81,34 @@ class SecurityAnalyzer {
     }
     async analyzePythonFile(code) {
         const config = vscode.workspace.getConfiguration('secureCodeAnalyzer');
-        const pythonPath = config.get('pythonPath', 'python');
-        const cliPath = path.join(this.context.extensionPath, 'backend', 'analyzer_cli.py');
+        // Use Go binary instead of Python
+        const goBinaryPath = path.join(this.context.extensionPath, 'analyzer-go', 'sentra-analyzer');
+        const goBinaryPathWindows = goBinaryPath + '.exe';
+        // Check if Go binary exists, fallback to building it
+        const fs = require('fs');
+        let binaryPath = goBinaryPath;
+        if (process.platform === 'win32') {
+            binaryPath = goBinaryPathWindows;
+        }
+        if (!fs.existsSync(binaryPath)) {
+            // Build the Go binary
+            try {
+                await execAsync('go build -o sentra-analyzer .', {
+                    cwd: path.join(this.context.extensionPath, 'analyzer-go'),
+                    timeout: 60000 // 1 minute timeout for building
+                });
+            }
+            catch (buildError) {
+                console.error('Failed to build Go analyzer:', buildError);
+                throw new Error('Failed to build security analyzer');
+            }
+        }
         try {
-            // Write code to temporary file to avoid shell escaping issues
-            const fs = require('fs');
+            // Write code to temporary file
             const os = require('os');
-            const tempFile = path.join(os.tmpdir(), `vscode_analyzer_${Date.now()}.py`);
+            const tempFile = path.join(os.tmpdir(), `sentra_analyzer_${Date.now()}.py`);
             await fs.promises.writeFile(tempFile, code, 'utf8');
-            const { stdout, stderr } = await execAsync(`"${pythonPath}" "${cliPath}" --file "${tempFile}" --format json`, {
+            const { stdout, stderr } = await execAsync(`"${binaryPath}" --file "${tempFile}" --format json`, {
                 cwd: this.context.extensionPath,
                 timeout: 30000 // 30 second timeout
             });
@@ -101,14 +120,14 @@ class SecurityAnalyzer {
                 console.warn('Failed to clean up temp file:', cleanupError);
             }
             if (stderr) {
-                console.warn('Python analyzer stderr:', stderr);
+                console.warn('Go analyzer stderr:', stderr);
             }
             const issues = JSON.parse(stdout.trim() || '[]');
             return this.filterIssuesBySeverity(issues);
         }
         catch (error) {
-            console.error('Python analyzer error:', error);
-            throw new Error(`Analysis failed: ${error}`);
+            console.error('Go analyzer error:', error);
+            throw new Error(`AI analysis failed: ${error}`);
         }
     }
     filterIssuesBySeverity(issues) {
@@ -127,7 +146,7 @@ class SecurityAnalyzer {
             0, Math.max(0, issue.line - 1), Number.MAX_VALUE);
             const severity = this.getSeverityLevel(issue.severity);
             const diagnostic = new vscode.Diagnostic(range, issue.issue, severity);
-            diagnostic.source = 'Secure Code Analyzer';
+            diagnostic.source = 'Sentra';
             diagnostic.code = issue.severity.toLowerCase();
             return diagnostic;
         });

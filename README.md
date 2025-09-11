@@ -1,6 +1,6 @@
 # Sentra
 
-Real-time security vulnerability scanner for VS Code. Scans Python code for security issues using AI-powered analysis.
+Real-time security vulnerability scanner for VS Code. Currently focuses on Python code but extensible to other languages.
 
 ## What it does
 
