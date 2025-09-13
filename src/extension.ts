@@ -51,7 +51,8 @@ export function activate(context: vscode.ExtensionContext) {
     // Register file save listener for auto-scan
     const onSaveDisposable = vscode.workspace.onDidSaveTextDocument(async (document) => {
         const config = vscode.workspace.getConfiguration('secureCodeAnalyzer');
-        if (config.get('autoScan') && config.get('enabled') && document.languageId === 'python') {
+        const supportedLanguages = ['python', 'javascript', 'typescript', 'java', 'c', 'cpp', 'go', 'php', 'csharp', 'rust'];
+        if (config.get('autoScan') && config.get('enabled') && supportedLanguages.includes(document.languageId)) {
             await analyzer.scanFile(document.uri);
         }
     });
@@ -59,7 +60,8 @@ export function activate(context: vscode.ExtensionContext) {
     // Register file open listener
     const onOpenDisposable = vscode.workspace.onDidOpenTextDocument(async (document) => {
         const config = vscode.workspace.getConfiguration('secureCodeAnalyzer');
-        if (config.get('enabled') && document.languageId === 'python') {
+        const supportedLanguages = ['python', 'javascript', 'typescript', 'java', 'c', 'cpp', 'go', 'php', 'csharp', 'rust'];
+        if (config.get('enabled') && supportedLanguages.includes(document.languageId)) {
             await analyzer.scanFile(document.uri);
         }
     });
