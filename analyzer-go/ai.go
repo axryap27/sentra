@@ -198,6 +198,76 @@ var javaVulnerabilityPatterns = []VulnerabilityPattern{
 	},
 }
 
+// C/C++ vulnerability patterns
+var cVulnerabilityPatterns = []VulnerabilityPattern{
+	{
+		Pattern:     "strcpy(",
+		Severity:    "High",
+		Description: "Buffer overflow vulnerability: strcpy() doesn't check buffer bounds",
+		AIScore:     0.95,
+	},
+	{
+		Pattern:     "strcat(",
+		Severity:    "High",
+		Description: "Buffer overflow vulnerability: strcat() doesn't check buffer bounds",
+		AIScore:     0.90,
+	},
+	{
+		Pattern:     "sprintf(",
+		Severity:    "High",
+		Description: "Buffer overflow vulnerability: sprintf() doesn't check buffer bounds",
+		AIScore:     0.88,
+	},
+	{
+		Pattern:     "gets(",
+		Severity:    "High",
+		Description: "Buffer overflow vulnerability: gets() has no bounds checking",
+		AIScore:     0.98,
+	},
+	{
+		Pattern:     "scanf(",
+		Severity:    "High",
+		Description: "Buffer overflow vulnerability: scanf() can overflow buffers",
+		AIScore:     0.85,
+	},
+	{
+		Pattern:     "printf(",
+		Severity:    "Medium",
+		Description: "Format string vulnerability: printf() with user-controlled format string",
+		AIScore:     0.75,
+	},
+	{
+		Pattern:     "system(",
+		Severity:    "High",
+		Description: "Command injection vulnerability: system() executes shell commands",
+		AIScore:     0.93,
+	},
+	{
+		Pattern:     "malloc(",
+		Severity:    "Medium",
+		Description: "Memory management risk: malloc() without proper free() can cause leaks",
+		AIScore:     0.60,
+	},
+	{
+		Pattern:     "free(",
+		Severity:    "Medium",
+		Description: "Memory management risk: free() without proper null check can cause crashes",
+		AIScore:     0.65,
+	},
+	{
+		Pattern:     "memcpy(",
+		Severity:    "High",
+		Description: "Buffer overflow vulnerability: memcpy() doesn't validate buffer sizes",
+		AIScore:     0.80,
+	},
+	{
+		Pattern:     "rand(",
+		Severity:    "Medium",
+		Description: "Weak randomness: rand() is not cryptographically secure",
+		AIScore:     0.65,
+	},
+}
+
 func NewAIAnalyzer(language Language) *AIAnalyzer {
 	return &AIAnalyzer{
 		language: language,
@@ -213,6 +283,8 @@ func (ai *AIAnalyzer) getVulnerabilityPatterns() []VulnerabilityPattern {
 		return javascriptVulnerabilityPatterns
 	case LanguageJava:
 		return javaVulnerabilityPatterns
+	case LanguageC, LanguageCPP:
+		return cVulnerabilityPatterns
 	default:
 		// For unsupported languages, return Python patterns as fallback
 		// In the future, this could return general patterns or use AI agent

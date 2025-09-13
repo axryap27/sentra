@@ -2,9 +2,10 @@
   "name": "sentra",
   "displayName": "sentra",
   "description": "Multi-language security vulnerability scanner with AI-powered analysis for Python, JavaScript, TypeScript, Java, C/C++, Go, PHP, C#, and Rust",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "aaryapatel",
   "license": "MIT",
+  
   "repository": {
     "type": "git",
     "url": "https://github.com/axryap27/sentra"
