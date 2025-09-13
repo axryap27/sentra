@@ -1,7 +1,7 @@
 {
   "name": "sentra",
   "displayName": "sentra",
-  "description": "Real-time editor integrated vulnerability scanner using AST-based analysis for VS Code",
+  "description": "Multi-language security vulnerability scanner with AI-powered analysis for Python, JavaScript, TypeScript, Java, C/C++, Go, PHP, C#, and Rust",
   "version": "0.1.1",
   "publisher": "aaryapatel",
   "license": "MIT",
@@ -28,7 +28,16 @@
     "cybersecurity"
   ],
   "activationEvents": [
-    "onLanguage:python"
+    "onLanguage:python",
+    "onLanguage:javascript", 
+    "onLanguage:typescript",
+    "onLanguage:java",
+    "onLanguage:c",
+    "onLanguage:cpp",
+    "onLanguage:go",
+    "onLanguage:php",
+    "onLanguage:csharp",
+    "onLanguage:rust"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -57,14 +66,14 @@
     "menus": {
       "editor/context": [
         {
-          "when": "resourceLangId == python",
+          "when": "resourceLangId == python || resourceLangId == javascript || resourceLangId == typescript || resourceLangId == java || resourceLangId == c || resourceLangId == cpp || resourceLangId == go || resourceLangId == php || resourceLangId == csharp || resourceLangId == rust",
           "command": "secureCodeAnalyzer.scanFile",
           "group": "security@1"
         }
       ],
       "explorer/context": [
         {
-          "when": "resourceExtname == .py",
+          "when": "resourceExtname == .py || resourceExtname == .js || resourceExtname == .jsx || resourceExtname == .ts || resourceExtname == .tsx || resourceExtname == .java || resourceExtname == .c || resourceExtname == .cpp || resourceExtname == .cc || resourceExtname == .cxx || resourceExtname == .hpp || resourceExtname == .h || resourceExtname == .go || resourceExtname == .php || resourceExtname == .cs || resourceExtname == .rs",
           "command": "secureCodeAnalyzer.scanFile",
           "group": "security@1"
         }
