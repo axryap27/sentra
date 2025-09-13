@@ -8,7 +8,8 @@ import (
 // AIAnalyzer provides AI-powered security analysis
 type AIAnalyzer struct {
 	// For now, we'll use rule-based detection with AI-like scoring
-	// Later we can integrate with actual ONNX models
+	// Later we can integrate with actual AI agents (OpenAI, Anthropic, local models)
+	language Language
 }
 
 type VulnerabilityPattern struct {
@@ -18,7 +19,7 @@ type VulnerabilityPattern struct {
 	AIScore     float64 // Confidence score (0.0 - 1.0)
 }
 
-var vulnerabilityPatterns = []VulnerabilityPattern{
+var pythonVulnerabilityPatterns = []VulnerabilityPattern{
 	{
 		Pattern:     "eval(",
 		Severity:    "High",
@@ -81,8 +82,142 @@ var vulnerabilityPatterns = []VulnerabilityPattern{
 	},
 }
 
-func NewAIAnalyzer() *AIAnalyzer {
-	return &AIAnalyzer{}
+// JavaScript/TypeScript vulnerability patterns
+var javascriptVulnerabilityPatterns = []VulnerabilityPattern{
+	{
+		Pattern:     "eval(",
+		Severity:    "High",
+		Description: "Code injection vulnerability: eval() executes arbitrary JavaScript code",
+		AIScore:     0.95,
+	},
+	{
+		Pattern:     "Function(",
+		Severity:    "High",
+		Description: "Code injection vulnerability: Function() constructor executes arbitrary code",
+		AIScore:     0.90,
+	},
+	{
+		Pattern:     "innerHTML",
+		Severity:    "High",
+		Description: "XSS vulnerability: innerHTML can execute malicious scripts",
+		AIScore:     0.85,
+	},
+	{
+		Pattern:     "dangerouslySetInnerHTML",
+		Severity:    "High",
+		Description: "XSS vulnerability: dangerouslySetInnerHTML bypasses React's XSS protection",
+		AIScore:     0.90,
+	},
+	{
+		Pattern:     "document.write(",
+		Severity:    "High",
+		Description: "XSS vulnerability: document.write() can inject malicious content",
+		AIScore:     0.80,
+	},
+	{
+		Pattern:     "setTimeout(",
+		Severity:    "Medium",
+		Description: "Code injection risk: setTimeout with string parameter executes code",
+		AIScore:     0.70,
+	},
+	{
+		Pattern:     "setInterval(",
+		Severity:    "Medium",
+		Description: "Code injection risk: setInterval with string parameter executes code",
+		AIScore:     0.70,
+	},
+	{
+		Pattern:     "localStorage.setItem",
+		Severity:    "Low",
+		Description: "Data exposure risk: sensitive data stored in localStorage",
+		AIScore:     0.50,
+	},
+	{
+		Pattern:     "Math.random()",
+		Severity:    "Medium",
+		Description: "Weak randomness: Math.random() is not cryptographically secure",
+		AIScore:     0.65,
+	},
+	{
+		Pattern:     "exec(",
+		Severity:    "High",
+		Description: "Command injection vulnerability: child_process.exec() executes shell commands",
+		AIScore:     0.92,
+	},
+}
+
+// Java vulnerability patterns
+var javaVulnerabilityPatterns = []VulnerabilityPattern{
+	{
+		Pattern:     "Runtime.getRuntime().exec(",
+		Severity:    "High",
+		Description: "Command injection vulnerability: Runtime.exec() executes system commands",
+		AIScore:     0.95,
+	},
+	{
+		Pattern:     "ProcessBuilder(",
+		Severity:    "High", 
+		Description: "Command injection risk: ProcessBuilder can execute system commands",
+		AIScore:     0.85,
+	},
+	{
+		Pattern:     "ObjectInputStream",
+		Severity:    "High",
+		Description: "Unsafe deserialization: ObjectInputStream can execute arbitrary code",
+		AIScore:     0.90,
+	},
+	{
+		Pattern:     "Math.random()",
+		Severity:    "Medium",
+		Description: "Weak randomness: Math.random() is not cryptographically secure",
+		AIScore:     0.65,
+	},
+	{
+		Pattern:     "MessageDigest.getInstance(\"MD5\")",
+		Severity:    "Medium",
+		Description: "Cryptographic weakness: MD5 is a broken hash function",
+		AIScore:     0.75,
+	},
+	{
+		Pattern:     "MessageDigest.getInstance(\"SHA1\")",
+		Severity:    "Medium",
+		Description: "Cryptographic weakness: SHA1 is vulnerable hash function",
+		AIScore:     0.75,
+	},
+	{
+		Pattern:     "Class.forName(",
+		Severity:    "Medium",
+		Description: "Reflection risk: Class.forName() can load arbitrary classes",
+		AIScore:     0.70,
+	},
+	{
+		Pattern:     "executeQuery(",
+		Severity:    "High",
+		Description: "SQL injection risk: dynamic query construction detected",
+		AIScore:     0.80,
+	},
+}
+
+func NewAIAnalyzer(language Language) *AIAnalyzer {
+	return &AIAnalyzer{
+		language: language,
+	}
+}
+
+// getVulnerabilityPatterns returns language-specific vulnerability patterns
+func (ai *AIAnalyzer) getVulnerabilityPatterns() []VulnerabilityPattern {
+	switch ai.language {
+	case LanguagePython:
+		return pythonVulnerabilityPatterns
+	case LanguageJavaScript, LanguageTypeScript:
+		return javascriptVulnerabilityPatterns
+	case LanguageJava:
+		return javaVulnerabilityPatterns
+	default:
+		// For unsupported languages, return Python patterns as fallback
+		// In the future, this could return general patterns or use AI agent
+		return pythonVulnerabilityPatterns
+	}
 }
 
 // AnalyzeWithAI performs AI-powered security analysis
@@ -93,8 +228,9 @@ func (ai *AIAnalyzer) AnalyzeWithAI(content string) ([]SecurityIssue, error) {
 	for lineNum, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
 		
-		// Check against AI-powered vulnerability patterns
-		for _, pattern := range vulnerabilityPatterns {
+		// Check against language-specific AI-powered vulnerability patterns
+		patterns := ai.getVulnerabilityPatterns()
+		for _, pattern := range patterns {
 			if strings.Contains(trimmedLine, pattern.Pattern) {
 				// Skip if it's in a comment
 				if strings.HasPrefix(trimmedLine, "#") {
