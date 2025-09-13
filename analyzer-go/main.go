@@ -7,6 +7,8 @@ import (
 	"go/token"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 type SecurityIssue struct {
@@ -15,15 +17,33 @@ type SecurityIssue struct {
 	Severity string `json:"severity"`
 }
 
+type Language string
+
+const (
+	LanguagePython     Language = "python"
+	LanguageJavaScript Language = "javascript"
+	LanguageTypeScript Language = "typescript"
+	LanguageJava       Language = "java"
+	LanguageC          Language = "c"
+	LanguageCPP        Language = "cpp"
+	LanguageGo         Language = "go"
+	LanguagePHP        Language = "php"
+	LanguageCSharp     Language = "csharp"
+	LanguageRust       Language = "rust"
+	LanguageUnknown    Language = "unknown"
+)
+
 type Analyzer struct {
-	fileSet *token.FileSet
-	issues  []SecurityIssue
+	fileSet  *token.FileSet
+	issues   []SecurityIssue
+	language Language
 }
 
-func NewAnalyzer() *Analyzer {
+func NewAnalyzer(language Language) *Analyzer {
 	return &Analyzer{
-		fileSet: token.NewFileSet(),
-		issues:  make([]SecurityIssue, 0),
+		fileSet:  token.NewFileSet(),
+		issues:   make([]SecurityIssue, 0),
+		language: language,
 	}
 }
 
@@ -36,9 +56,9 @@ func (a *Analyzer) addIssue(pos token.Pos, issue, severity string) {
 	})
 }
 
-func (a *Analyzer) analyzePythonFile(content string) error {
-	// Use AI-powered analysis
-	aiAnalyzer := NewAIAnalyzer()
+func (a *Analyzer) analyzeFile(content string) error {
+	// Use AI-powered analysis with language-specific patterns
+	aiAnalyzer := NewAIAnalyzer(a.language)
 	
 	aiIssues, err := aiAnalyzer.AnalyzeWithAI(content)
 	if err != nil {
@@ -68,8 +88,11 @@ func main() {
 		log.Fatalf("Error reading file: %v", err)
 	}
 
-	analyzer := NewAnalyzer()
-	err = analyzer.analyzePythonFile(string(content))
+	// Detect language from file path
+	language := detectLanguage(*filePath)
+	
+	analyzer := NewAnalyzer(language)
+	err = analyzer.analyzeFile(string(content))
 	if err != nil {
 		log.Fatalf("Analysis error: %v", err)
 	}
@@ -90,5 +113,35 @@ func main() {
 				fmt.Printf("%d. [Line %d] (%s) %s\n", i+1, issue.Line, issue.Severity, issue.Issue)
 			}
 		}
+	}
+}
+
+// detectLanguage determines the programming language from file extension
+func detectLanguage(filePath string) Language {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	
+	switch ext {
+	case ".py":
+		return LanguagePython
+	case ".js", ".jsx":
+		return LanguageJavaScript
+	case ".ts", ".tsx":
+		return LanguageTypeScript
+	case ".java":
+		return LanguageJava
+	case ".c":
+		return LanguageC
+	case ".cpp", ".cc", ".cxx", ".hpp", ".h":
+		return LanguageCPP
+	case ".go":
+		return LanguageGo
+	case ".php":
+		return LanguagePHP
+	case ".cs":
+		return LanguageCSharp
+	case ".rs":
+		return LanguageRust
+	default:
+		return LanguageUnknown
 	}
 }
