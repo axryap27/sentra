@@ -16,12 +16,12 @@ class SecurityAnalyzer {
         context.subscriptions.push(this.diagnosticCollection);
     }
     async scanFile(uri) {
-        if (path.extname(uri.fsPath) !== '.py') {
+        if (!this.isSupportedLanguage(uri.fsPath)) {
             return;
         }
         try {
             const document = await vscode.workspace.openTextDocument(uri);
-            const issues = await this.analyzePythonFile(document.getText());
+            const issues = await this.analyzeFile(document.getText(), uri.fsPath);
             this.updateDiagnostics(uri, issues);
         }
         catch (error) {
@@ -34,10 +34,10 @@ class SecurityAnalyzer {
         if (!config.get('enabled')) {
             return null;
         }
-        // Find all Python files in workspace
-        const pythonFiles = await vscode.workspace.findFiles('**/*.py', '**/node_modules/**');
-        if (pythonFiles.length === 0) {
-            vscode.window.showInformationMessage('No Python files found in workspace');
+        // Find all supported source code files in workspace
+        const supportedFiles = await this.findSupportedFiles();
+        if (supportedFiles.length === 0) {
+            vscode.window.showInformationMessage('No supported source code files found in workspace');
             return null;
         }
         const reports = [];
@@ -46,15 +46,15 @@ class SecurityAnalyzer {
             title: 'Scanning workspace for security vulnerabilities...',
             cancellable: true
         }, async (progress, token) => {
-            const total = pythonFiles.length;
+            const total = supportedFiles.length;
             let processed = 0;
-            for (const file of pythonFiles) {
+            for (const file of supportedFiles) {
                 if (token.isCancellationRequested) {
                     break;
                 }
                 try {
                     const document = await vscode.workspace.openTextDocument(file);
-                    const issues = await this.analyzePythonFile(document.getText());
+                    const issues = await this.analyzeFile(document.getText(), file.fsPath);
                     this.updateDiagnostics(file, issues);
                     if (issues.length > 0) {
                         reports.push({
@@ -73,13 +73,50 @@ class SecurityAnalyzer {
                 });
             }
             if (!token.isCancellationRequested) {
-                vscode.window.showInformationMessage(`Workspace scan completed. Scanned ${processed} Python files.`);
+                vscode.window.showInformationMessage(`Workspace scan completed. Scanned ${processed} source code files.`);
             }
         });
         this.lastWorkspaceReport = reports;
         return reports;
     }
-    async analyzePythonFile(code) {
+    isSupportedLanguage(filePath) {
+        const ext = path.extname(filePath).toLowerCase();
+        const supportedExtensions = [
+            '.py',
+            '.js',
+            '.jsx',
+            '.ts',
+            '.tsx',
+            '.java',
+            '.c',
+            '.cpp',
+            '.cc',
+            '.cxx',
+            '.hpp',
+            '.h',
+            '.go',
+            '.php',
+            '.cs',
+            '.rs' // Rust
+        ];
+        return supportedExtensions.includes(ext);
+    }
+    async findSupportedFiles() {
+        const patterns = [
+            '**/*.py', '**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx',
+            '**/*.java', '**/*.c', '**/*.cpp', '**/*.cc', '**/*.cxx',
+            '**/*.hpp', '**/*.h', '**/*.go', '**/*.php', '**/*.cs', '**/*.rs'
+        ];
+        const allFiles = [];
+        for (const pattern of patterns) {
+            const files = await vscode.workspace.findFiles(pattern, '**/node_modules/**');
+            allFiles.push(...files);
+        }
+        // Remove duplicates
+        const uniqueFiles = allFiles.filter((file, index, self) => index === self.findIndex(f => f.fsPath === file.fsPath));
+        return uniqueFiles;
+    }
+    async analyzeFile(code, filePath) {
         const config = vscode.workspace.getConfiguration('secureCodeAnalyzer');
         // Use Go binary instead of Python
         const goBinaryPath = path.join(this.context.extensionPath, 'analyzer-go', 'sentra-analyzer');
@@ -104,9 +141,10 @@ class SecurityAnalyzer {
             }
         }
         try {
-            // Write code to temporary file
+            // Write code to temporary file with appropriate extension
             const os = require('os');
-            const tempFile = path.join(os.tmpdir(), `sentra_analyzer_${Date.now()}.py`);
+            const fileExt = path.extname(filePath);
+            const tempFile = path.join(os.tmpdir(), `sentra_analyzer_${Date.now()}${fileExt}`);
             await fs.promises.writeFile(tempFile, code, 'utf8');
             const { stdout, stderr } = await execAsync(`"${binaryPath}" --file "${tempFile}" --format json`, {
                 cwd: this.context.extensionPath,
