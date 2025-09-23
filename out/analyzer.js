@@ -9,10 +9,14 @@ const execAsync = (0, util_1.promisify)(child_process_1.exec);
 class SecurityAnalyzer {
     constructor(context) {
         this.lastWorkspaceReport = [];
+        this.fileCache = new Map();
+        this.crypto = require('crypto');
         this.context = context;
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('securityAnalyzer');
         // Path to the Python analyzer script
         this.pythonAnalyzerPath = path.join(context.extensionPath, 'backend', 'analyzer.py');
+        // Load cache from persistent storage
+        this.loadCache();
         context.subscriptions.push(this.diagnosticCollection);
     }
     async scanFile(uri) {
@@ -21,7 +25,22 @@ class SecurityAnalyzer {
         }
         try {
             const document = await vscode.workspace.openTextDocument(uri);
-            const issues = await this.analyzeFile(document.getText(), uri.fsPath);
+            const content = document.getText();
+            // Check if file has changed since last analysis
+            const hasChanged = await this.isFileChanged(uri.fsPath, content);
+            let issues;
+            if (!hasChanged) {
+                // Use cached results
+                const cached = this.fileCache.get(uri.fsPath);
+                issues = cached?.issues || [];
+                console.log(`Using cached results for ${path.basename(uri.fsPath)}`);
+            }
+            else {
+                // Analyze file and update cache
+                issues = await this.analyzeFile(content, uri.fsPath);
+                await this.updateFileCache(uri.fsPath, content, issues);
+                console.log(`Analyzed ${path.basename(uri.fsPath)} - found ${issues.length} issues`);
+            }
             this.updateDiagnostics(uri, issues);
         }
         catch (error) {
@@ -54,7 +73,20 @@ class SecurityAnalyzer {
                 }
                 try {
                     const document = await vscode.workspace.openTextDocument(file);
-                    const issues = await this.analyzeFile(document.getText(), file.fsPath);
+                    const content = document.getText();
+                    // Check if file has changed since last analysis
+                    const hasChanged = await this.isFileChanged(file.fsPath, content);
+                    let issues;
+                    if (!hasChanged) {
+                        // Use cached results
+                        const cached = this.fileCache.get(file.fsPath);
+                        issues = cached?.issues || [];
+                    }
+                    else {
+                        // Analyze file and update cache
+                        issues = await this.analyzeFile(content, file.fsPath);
+                        await this.updateFileCache(file.fsPath, content, issues);
+                    }
                     this.updateDiagnostics(file, issues);
                     if (issues.length > 0) {
                         reports.push({
@@ -211,6 +243,64 @@ class SecurityAnalyzer {
     }
     dispose() {
         this.diagnosticCollection.dispose();
+        this.saveCache();
+    }
+    generateContentHash(content) {
+        return this.crypto.createHash('md5').update(content).digest('hex');
+    }
+    async loadCache() {
+        try {
+            const cacheData = this.context.globalState.get('sentra.fileCache', {});
+            this.fileCache = new Map(Object.entries(cacheData));
+        }
+        catch (error) {
+            console.warn('Failed to load cache:', error);
+            this.fileCache = new Map();
+        }
+    }
+    async saveCache() {
+        try {
+            const cacheData = Object.fromEntries(this.fileCache);
+            await this.context.globalState.update('sentra.fileCache', cacheData);
+        }
+        catch (error) {
+            console.warn('Failed to save cache:', error);
+        }
+    }
+    async isFileChanged(filePath, content) {
+        const fs = require('fs');
+        try {
+            const stats = await fs.promises.stat(filePath);
+            const lastModified = stats.mtimeMs;
+            const contentHash = this.generateContentHash(content);
+            const cached = this.fileCache.get(filePath);
+            if (!cached) {
+                return true; // File not in cache, consider it changed
+            }
+            // Check if file has been modified or content has changed
+            return cached.lastModified !== lastModified || cached.contentHash !== contentHash;
+        }
+        catch (error) {
+            // If we can't stat the file, consider it changed
+            return true;
+        }
+    }
+    async updateFileCache(filePath, content, issues) {
+        const fs = require('fs');
+        try {
+            const stats = await fs.promises.stat(filePath);
+            const lastModified = stats.mtimeMs;
+            const contentHash = this.generateContentHash(content);
+            this.fileCache.set(filePath, {
+                path: filePath,
+                lastModified,
+                contentHash,
+                issues: [...issues] // Create a copy to avoid reference issues
+            });
+        }
+        catch (error) {
+            console.warn('Failed to update cache for', filePath, error);
+        }
     }
 }
 exports.SecurityAnalyzer = SecurityAnalyzer;
