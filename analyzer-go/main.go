@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 type SecurityIssue struct {
@@ -75,21 +77,30 @@ func (a *Analyzer) getIssues() []SecurityIssue {
 
 func main() {
 	var filePath = flag.String("file", "", "File to analyze")
+	var batchMode = flag.Bool("batch", false, "Batch mode: read file paths from stdin")
 	var format = flag.String("format", "json", "Output format (json or text)")
+	var workers = flag.Int("workers", 4, "Number of worker goroutines for batch processing")
 	flag.Parse()
 
-	if *filePath == "" {
-		fmt.Fprintf(os.Stderr, "Error: --file parameter is required\n")
-		os.Exit(1)
+	if *batchMode {
+		processBatch(*workers, *format)
+	} else {
+		if *filePath == "" {
+			fmt.Fprintf(os.Stderr, "Error: --file parameter is required\n")
+			os.Exit(1)
+		}
+		processSingleFile(*filePath, *format)
 	}
+}
 
-	content, err := os.ReadFile(*filePath)
+func processSingleFile(filePath, format string) {
+	content, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Fatalf("Error reading file: %v", err)
 	}
 
 	// Detect language from file path
-	language := detectLanguage(*filePath)
+	language := detectLanguage(filePath)
 	
 	analyzer := NewAnalyzer(language)
 	err = analyzer.analyzeFile(string(content))
@@ -98,8 +109,109 @@ func main() {
 	}
 
 	issues := analyzer.getIssues()
+	outputResults(issues, format)
+}
 
-	if *format == "json" {
+type FileJob struct {
+	Path string
+	Content string
+	Language Language
+}
+
+type FileResult struct {
+	Path string
+	Issues []SecurityIssue
+	Error error
+}
+
+func processBatch(workers int, format string) {
+	
+	jobs := make(chan FileJob, workers*2)
+	results := make(chan FileResult, workers*2)
+	
+	// Start worker goroutines
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range jobs {
+				analyzer := NewAnalyzer(job.Language)
+				err := analyzer.analyzeFile(job.Content)
+				
+				result := FileResult{
+					Path: job.Path,
+					Issues: analyzer.getIssues(),
+					Error: err,
+				}
+				results <- result
+			}
+		}()
+	}
+	
+	// Read file paths from stdin and send jobs
+	go func() {
+		defer close(jobs)
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			filePath := strings.TrimSpace(scanner.Text())
+			if filePath == "" {
+				continue
+			}
+			
+			content, err := os.ReadFile(filePath)
+			if err != nil {
+				results <- FileResult{Path: filePath, Error: err}
+				continue
+			}
+			
+			language := detectLanguage(filePath)
+			jobs <- FileJob{
+				Path: filePath,
+				Content: string(content),
+				Language: language,
+			}
+		}
+	}()
+	
+	// Close results channel when all workers are done
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+	
+	// Collect and output results
+	allResults := make(map[string][]SecurityIssue)
+	for result := range results {
+		if result.Error != nil {
+			fmt.Fprintf(os.Stderr, "Error processing %s: %v\n", result.Path, result.Error)
+			continue
+		}
+		allResults[result.Path] = result.Issues
+	}
+	
+	if format == "json" {
+		jsonOutput, err := json.MarshalIndent(allResults, "", "  ")
+		if err != nil {
+			log.Fatalf("Error marshaling JSON: %v", err)
+		}
+		fmt.Println(string(jsonOutput))
+	} else {
+		for path, issues := range allResults {
+			fmt.Printf("\n=== %s ===\n", path)
+			if len(issues) == 0 {
+				fmt.Println("No security vulnerabilities found.")
+			} else {
+				for i, issue := range issues {
+					fmt.Printf("%d. [Line %d] (%s) %s\n", i+1, issue.Line, issue.Severity, issue.Issue)
+				}
+			}
+		}
+	}
+}
+
+func outputResults(issues []SecurityIssue, format string) {
+	if format == "json" {
 		jsonOutput, err := json.MarshalIndent(issues, "", "  ")
 		if err != nil {
 			log.Fatalf("Error marshaling JSON: %v", err)
