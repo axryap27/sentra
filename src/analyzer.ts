@@ -53,8 +53,10 @@ export class SecurityAnalyzer {
             const document = await vscode.workspace.openTextDocument(uri);
             const content = document.getText();
             
-            // Check if file has changed since last analysis
-            const hasChanged = await this.isFileChanged(uri.fsPath, content);
+            // Check if incremental scanning is enabled and file has changed
+            const config = vscode.workspace.getConfiguration('secureCodeAnalyzer');
+            const incrementalEnabled = config.get<boolean>('enableIncrementalScanning', true);
+            const hasChanged = !incrementalEnabled || await this.isFileChanged(uri.fsPath, content);
             
             let issues: SecurityIssue[];
             
@@ -110,8 +112,9 @@ export class SecurityAnalyzer {
                     const document = await vscode.workspace.openTextDocument(file);
                     const content = document.getText();
                     
-                    // Check if file has changed since last analysis
-                    const hasChanged = await this.isFileChanged(file.fsPath, content);
+                    // Check if incremental scanning is enabled and file has changed
+                    const incrementalEnabled = vscode.workspace.getConfiguration('secureCodeAnalyzer').get<boolean>('enableIncrementalScanning', true);
+                    const hasChanged = !incrementalEnabled || await this.isFileChanged(file.fsPath, content);
                     
                     let issues: SecurityIssue[];
                     
@@ -178,24 +181,61 @@ export class SecurityAnalyzer {
     }
 
     private async findSupportedFiles(): Promise<vscode.Uri[]> {
+        const config = vscode.workspace.getConfiguration('secureCodeAnalyzer');
+        const excludePatterns = config.get<string[]>('excludePatterns', [
+            '**/node_modules/**', 
+            '**/test/**', 
+            '**/tests/**', 
+            '**/__pycache__/**',
+            '**/target/**',        // Java/Rust builds
+            '**/build/**',         // Build directories
+            '**/dist/**',          // Distribution directories
+            '**/.git/**',          // Git directories
+            '**/vendor/**',        // Go/PHP vendor
+            '**/bin/**',           // Binary directories
+            '**/obj/**'            // C# object files
+        ]);
+        
         const patterns = [
             '**/*.py', '**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx',
             '**/*.java', '**/*.c', '**/*.cpp', '**/*.cc', '**/*.cxx',
             '**/*.hpp', '**/*.h', '**/*.go', '**/*.php', '**/*.cs', '**/*.rs'
         ];
         
+        // Create exclusion pattern
+        const excludePattern = `{${excludePatterns.join(',')}}`;
+        
         const allFiles: vscode.Uri[] = [];
         for (const pattern of patterns) {
-            const files = await vscode.workspace.findFiles(pattern, '**/node_modules/**');
+            const files = await vscode.workspace.findFiles(pattern, excludePattern);
             allFiles.push(...files);
         }
         
-        // Remove duplicates
+        // Remove duplicates and filter by file size (skip very large files)
         const uniqueFiles = allFiles.filter((file, index, self) => 
             index === self.findIndex(f => f.fsPath === file.fsPath)
         );
         
-        return uniqueFiles;
+        // Filter out files that are too large (configurable limit)
+        const maxFileSize = config.get<number>('maxFileSize', 1024 * 1024); // 1MB default
+        const filteredFiles: vscode.Uri[] = [];
+        
+        for (const file of uniqueFiles) {
+            try {
+                const fs = require('fs');
+                const stats = await fs.promises.stat(file.fsPath);
+                if (stats.size <= maxFileSize) {
+                    filteredFiles.push(file);
+                } else {
+                    console.log(`Skipping large file: ${file.fsPath} (${Math.round(stats.size / 1024)}KB)`);
+                }
+            } catch (error) {
+                // If we can't stat the file, skip it
+                console.warn(`Could not stat file: ${file.fsPath}`, error);
+            }
+        }
+        
+        return filteredFiles;
     }
 
     private async analyzeFile(code: string, filePath: string): Promise<SecurityIssue[]> {
