@@ -56,7 +56,7 @@ Security issues show up as:
 
 ## How it works
 
-The extension uses a Go backend with AI-powered pattern matching to analyze your Python code. It looks at the code structure and content to find potential security vulnerabilities with confidence scoring.
+The extension uses a Go backend with AI-powered pattern matching to analyze your code. It looks at the code structure and content to find potential security vulnerabilities with confidence scoring.
 
 ## License
 
