@@ -15,6 +15,7 @@ def create_test_files(num_files=50, lines_per_file=100):
     test_dir = "benchmark_files"
     os.makedirs(test_dir, exist_ok=True)
     
+    # AST-based vunerability detection
     vulnerable_patterns = [
         "eval(user_input)",
         "exec(malicious_code)", 
